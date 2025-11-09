@@ -29,12 +29,12 @@ pipeline {
             steps {
                 echo '🧠 Running Python report generator inside container...'
                 bat '''
-                    docker run --rm \
-                        -v $PWD/$REPORT_DIR:/app/reports \
+                    docker run --rm ^
+                        -v "%cd%\\reports:/app/reports" ^
                         report-generator python report_generator.py
 
                     echo "📦 Compressing generated reports..."
-                    zip -r reports/reports_backup.zip reports/
+                    
                 '''
             }
         }

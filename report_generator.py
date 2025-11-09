@@ -1,9 +1,12 @@
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # ✅ Ensures plotting works inside Jenkins/Docker (no display)
 import matplotlib.pyplot as plt
 import os
 import shutil
 from datetime import datetime
+import zipfile
 
 # === CONFIGURATION ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -50,7 +53,6 @@ plt.savefig(chart_path)
 plt.close()
 
 # === STEP 4: Copy CSS File ===
-# Copy style.css into reports folder for S3 hosting
 if os.path.exists(STYLE_SRC):
     shutil.copy(STYLE_SRC, STYLE_DEST)
 
@@ -58,7 +60,7 @@ if os.path.exists(STYLE_SRC):
 csv_path = os.path.join(REPORT_DIR, "sales_report.csv")
 html_path = os.path.join(REPORT_DIR, "sales_report.html")
 
-df.to_csv(csv_path, index=False)
+df.to_csv(csv_path, index=False, encoding='utf-8')
 
 # === STEP 6: Create HTML Report ===
 html_content = f"""
@@ -84,9 +86,19 @@ html_content = f"""
 with open(html_path, "w", encoding="utf-8") as f:
     f.write(html_content)
 
-# === STEP 7: Console Output ===
+# === STEP 7: Create ZIP Backup ===
+zip_path = os.path.join(REPORT_DIR, "reports_backup.zip")
+with zipfile.ZipFile(zip_path, 'w') as zipf:
+    for root, _, files in os.walk(REPORT_DIR):
+        for file in files:
+            if not file.endswith(".zip"):
+                file_path = os.path.join(root, file)
+                zipf.write(file_path, os.path.relpath(file_path, REPORT_DIR))
+
+# === STEP 8: Console Output ===
 print("\n✅ Report generation complete!")
-print(f"CSV Report: {csv_path}")
-print(f"HTML Report: {html_path}")
-print(f"Chart: {chart_path}")
-print(f"CSS copied to: {STYLE_DEST}")
+print(f"📊 CSV Report: {csv_path}")
+print(f"📄 HTML Report: {html_path}")
+print(f"🖼️ Chart: {chart_path}")
+print(f"🎨 CSS copied to: {STYLE_DEST}")
+print(f"🗜️ Zipped backup: {zip_path}")
