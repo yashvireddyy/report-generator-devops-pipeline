@@ -5,7 +5,7 @@ variable "aws_region" {
 
 variable "bucket_name" {
   description = "Name of the S3 bucket for reports"
-  default     = "report-bucket-yashvi-2025"
+  default     = "my-devops-pipeline-bucket"
 }
 
 variable "cloudfront_comment" {
