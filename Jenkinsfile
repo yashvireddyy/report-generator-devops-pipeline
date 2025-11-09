@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'ap-south-1'
-        S3_BUCKET = 'report-bucket-yashvi-2025'   // ✅ your actual S3 bucket name
+        S3_BUCKET = 'report-bucket-yashvi-2025'
         REPORT_DIR = 'reports'
         GIT_REPO = 'https://github.com/yashvireddyy/report-generator-devops-pipeline.git'
         BRANCH = 'main'
@@ -21,7 +21,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo '🐳 Building Docker image for report generation...'
-                // ✅ Ensure Dockerfile and script names match your repo
                 bat 'docker build -t report-generator .'
             }
         }
@@ -29,7 +28,6 @@ pipeline {
         stage('Run Report Generator') {
             steps {
                 echo '🧠 Running Python report generator inside container...'
-                // ✅ Ensure script name matches your Python file (e.g., generate_report.py)
                 bat '''
                     docker run --rm ^
                         -v "%cd%\\reports:/app/reports" ^
