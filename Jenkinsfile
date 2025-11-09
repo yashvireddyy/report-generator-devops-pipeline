@@ -3,10 +3,10 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'ap-south-1'
-        S3_BUCKET = 'my-report-bucket'           // replace with your actual S3 bucket
+        S3_BUCKET = 'report-bucket-yashvi-2025'   // ✅ your actual S3 bucket name
         REPORT_DIR = 'reports'
         GIT_REPO = 'https://github.com/yashvireddyy/report-generator-devops-pipeline.git'
-        BRANCH = 'main'                         // change if using another branch
+        BRANCH = 'main'
     }
 
     stages {
@@ -21,6 +21,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo '🐳 Building Docker image for report generation...'
+                // ✅ Ensure Dockerfile and script names match your repo
                 bat 'docker build -t report-generator .'
             }
         }
@@ -28,13 +29,11 @@ pipeline {
         stage('Run Report Generator') {
             steps {
                 echo '🧠 Running Python report generator inside container...'
+                // ✅ Ensure script name matches your Python file (e.g., generate_report.py)
                 bat '''
                     docker run --rm ^
                         -v "%cd%\\reports:/app/reports" ^
-                        report-generator python report_generator.py
-
-                    echo "📦 Compressing generated reports..."
-                    
+                        report-generator python generate_report.py
                 '''
             }
         }
@@ -56,9 +55,7 @@ pipeline {
             steps {
                 echo '☁️ Uploading generated reports to AWS S3...'
                 withAWS(region: "${AWS_DEFAULT_REGION}", credentials: 'aws-jenkins-creds') {
-                    bat '''
-                        aws s3 sync ./reports s3://$S3_BUCKET --delete
-                    '''
+                    bat "aws s3 sync %REPORT_DIR% s3://%S3_BUCKET% --delete"
                 }
             }
         }
@@ -71,6 +68,7 @@ pipeline {
                         script: "terraform -chdir=terraform output -raw cloudfront_url",
                         returnStdout: true
                     ).trim()
+
                     echo "✅ Reports uploaded successfully!"
                     echo "S3 URL: https://${S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com/sales_report.html"
                     echo "CloudFront URL: ${cloudfront_url}"
@@ -89,4 +87,3 @@ pipeline {
         }
     }
 }
-
