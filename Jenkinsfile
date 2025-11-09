@@ -39,15 +39,19 @@ pipeline {
         stage('Terraform Infrastructure Setup') {
             steps {
                 echo '🌍 Setting up AWS infrastructure using Terraform...'
-                dir('terraform') {
-                    bat '''
-                        terraform init -input=false
-                        terraform plan -out=tfplan
-                        terraform apply -auto-approve tfplan
-                    '''
+                withAWS(region: "${AWS_DEFAULT_REGION}", credentials: 'aws-credentials-s3') {
+                    dir('terraform') {
+                        bat '''
+                            terraform init -input=false
+                            terraform plan -out=tfplan
+                            terraform apply -auto-approve tfplan
+                        '''
+                    }
                 }
             }
-        }
+        }    
+
+
 
         stage('Upload Reports to S3') {
             steps {
