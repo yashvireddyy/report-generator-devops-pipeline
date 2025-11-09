@@ -21,14 +21,14 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo '🐳 Building Docker image for report generation...'
-                sh 'docker build -t report-generator .'
+                bat 'docker build -t report-generator .'
             }
         }
 
         stage('Run Report Generator') {
             steps {
                 echo '🧠 Running Python report generator inside container...'
-                sh '''
+                bat '''
                     docker run --rm \
                         -v $PWD/$REPORT_DIR:/app/reports \
                         report-generator python report_generator.py
@@ -43,7 +43,7 @@ pipeline {
             steps {
                 echo '🌍 Setting up AWS infrastructure using Terraform...'
                 dir('terraform') {
-                    sh '''
+                    bat '''
                         terraform init -input=false
                         terraform plan -out=tfplan
                         terraform apply -auto-approve tfplan
@@ -56,7 +56,7 @@ pipeline {
             steps {
                 echo '☁️ Uploading generated reports to AWS S3...'
                 withAWS(region: "${AWS_DEFAULT_REGION}", credentials: 'aws-jenkins-creds') {
-                    sh '''
+                    bat '''
                         aws s3 sync ./reports s3://$S3_BUCKET --delete
                     '''
                 }
@@ -67,7 +67,7 @@ pipeline {
             steps {
                 echo '🔍 Verifying upload and displaying URLs...'
                 script {
-                    def cloudfront_url = sh(
+                    def cloudfront_url = bat(
                         script: "terraform -chdir=terraform output -raw cloudfront_url",
                         returnStdout: true
                     ).trim()
