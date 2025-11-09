@@ -5,7 +5,7 @@ pipeline {
         AWS_DEFAULT_REGION = 'ap-south-1'
         S3_BUCKET = 'my-report-bucket'           // replace with your actual S3 bucket
         REPORT_DIR = 'reports'
-        GIT_REPO = 'https://github.com/yashvireddyy/automated-report-generator.git'
+        GIT_REPO = 'https://github.com/yashvireddyy/report-generator-devops-pipeline.git'
         BRANCH = 'main'                         // change if using another branch
     }
 
