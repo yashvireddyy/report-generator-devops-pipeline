@@ -9,3 +9,4 @@ output "s3_url" {
 output "cloudfront_url" {
   value = "https://${aws_cloudfront_distribution.report_distribution.domain_name}/report.html"
 }
+
