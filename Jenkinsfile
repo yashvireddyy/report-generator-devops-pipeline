@@ -54,7 +54,7 @@ pipeline {
         stage('Upload Reports to S3') {
             steps {
                 echo '☁️ Uploading generated reports to AWS S3...'
-                withAWS(region: "${AWS_DEFAULT_REGION}", credentials: 'aws-jenkins-creds') {
+                withAWS(region: "${AWS_DEFAULT_REGION}", credentials: 'aws-credentials-s3') {
                     bat "aws s3 sync %REPORT_DIR% s3://%S3_BUCKET% --delete"
                 }
             }
