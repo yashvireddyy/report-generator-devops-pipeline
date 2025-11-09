@@ -33,7 +33,7 @@ pipeline {
                 bat '''
                     docker run --rm ^
                         -v "%cd%\\reports:/app/reports" ^
-                        report-generator python generate_report.py
+                        report-generator python report_generator.py
                 '''
             }
         }
