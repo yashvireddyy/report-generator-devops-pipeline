@@ -85,11 +85,13 @@ resource "aws_cloudfront_distribution" "report_distribution" {
 }
 
 # -------------------------------
-# IAM Policy for existing Jenkins user
+# IAM Policy for Jenkins User
 # -------------------------------
+# Replace the username below with your actual IAM username created for Jenkins
+# Example: "jenkins-deploy-user" or "report-generator-user"
 resource "aws_iam_user_policy" "jenkins_policy" {
   name = "jenkins-s3-upload-policy"
-  user = jenkins-deploy-user   # <-- existing IAM username
+  user = "jenkins-deploy-user"   # <-- put your IAM username here in quotes!
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -100,7 +102,8 @@ resource "aws_iam_user_policy" "jenkins_policy" {
           "s3:PutObject",
           "s3:ListBucket",
           "s3:GetObject",
-          "s3:DeleteObject"
+          "s3:DeleteObject",
+          "cloudfront:CreateInvalidation"
         ],
         Resource = [
           aws_s3_bucket.report_bucket.arn,
@@ -109,4 +112,19 @@ resource "aws_iam_user_policy" "jenkins_policy" {
       }
     ]
   })
+}
+
+# -------------------------------
+# Terraform Outputs
+# -------------------------------
+output "s3_bucket_name" {
+  value = aws_s3_bucket.report_bucket.bucket
+}
+
+output "s3_url" {
+  value = "https://${aws_s3_bucket.report_bucket.bucket}.s3.amazonaws.com/report.html"
+}
+
+output "cloudfront_url" {
+  value = "https://${aws_cloudfront_distribution.report_distribution.domain_name}/report.html"
 }
