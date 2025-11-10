@@ -10,14 +10,14 @@ data "aws_s3_bucket" "existing_bucket" {
 }
 
 # ---------------------------------------------------------
-# CloudFront OAI (still managed by Terraform)
+# CloudFront Origin Access Identity
 # ---------------------------------------------------------
 resource "aws_cloudfront_origin_access_identity" "oai" {
-  comment = "OAI for existing report-generator-bucket"
+  comment = "OAI for existing S3 bucket"
 }
 
 # ---------------------------------------------------------
-# CloudFront Distribution (uses existing S3 bucket)
+# CloudFront Distribution (points to existing S3 bucket)
 # ---------------------------------------------------------
 resource "aws_cloudfront_distribution" "report_distribution" {
   origin {
@@ -64,7 +64,7 @@ resource "aws_cloudfront_distribution" "report_distribution" {
 }
 
 # ---------------------------------------------------------
-# S3 Bucket Policy for CloudFront Access
+# S3 Bucket Policy to allow CloudFront OAI access
 # ---------------------------------------------------------
 resource "aws_s3_bucket_policy" "private_policy" {
   bucket = data.aws_s3_bucket.existing_bucket.id
@@ -86,7 +86,7 @@ resource "aws_s3_bucket_policy" "private_policy" {
 }
 
 # ---------------------------------------------------------
-# IAM Policy for Jenkins uploads
+# IAM Policy for Jenkins to upload reports to S3
 # ---------------------------------------------------------
 resource "aws_iam_user_policy" "jenkins_policy" {
   name = "jenkins-s3-upload-policy"
