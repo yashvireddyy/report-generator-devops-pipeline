@@ -2,11 +2,11 @@ provider "aws" {
   region = var.aws_region
 }
 
-
-
-# S3 Bucket (Private)
+# -------------------------------
+# Single S3 Bucket (Static)
+# -------------------------------
 resource "aws_s3_bucket" "report_bucket" {
-  bucket = "${var.bucket_name}-${var.build_number}"
+  bucket = var.bucket_name  # ✅ Use a fixed bucket name (not dynamic)
   tags = {
     Name        = "report-generator-bucket"
     Environment = "Dev"
@@ -21,12 +21,16 @@ resource "aws_s3_bucket_public_access_block" "public_access" {
   restrict_public_buckets = true
 }
 
-# CloudFront OAI
+# -------------------------------
+# CloudFront Origin Access Identity
+# -------------------------------
 resource "aws_cloudfront_origin_access_identity" "oai" {
   comment = "OAI for report-generator-bucket"
 }
 
+# -------------------------------
 # CloudFront Distribution
+# -------------------------------
 resource "aws_cloudfront_distribution" "report_distribution" {
   origin {
     domain_name = aws_s3_bucket.report_bucket.bucket_regional_domain_name
@@ -71,41 +75,45 @@ resource "aws_cloudfront_distribution" "report_distribution" {
   }
 }
 
-# S3 Bucket Policy for CloudFront
+# -------------------------------
+# S3 Bucket Policy for CloudFront Access
+# -------------------------------
 resource "aws_s3_bucket_policy" "private_policy" {
   bucket = aws_s3_bucket.report_bucket.id
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Sid       = "AllowCloudFrontAccess"
-        Effect    = "Allow"
+        Sid    = "AllowCloudFrontAccess",
+        Effect = "Allow",
         Principal = {
           AWS = aws_cloudfront_origin_access_identity.oai.iam_arn
-        }
-        Action   = ["s3:GetObject"]
+        },
+        Action   = ["s3:GetObject"],
         Resource = "${aws_s3_bucket.report_bucket.arn}/*"
       }
     ]
   })
 }
 
-# IAM Policy for Jenkins to upload files
+# -------------------------------
+# IAM Policy for Jenkins (upload reports)
+# -------------------------------
 resource "aws_iam_user_policy" "jenkins_policy" {
   name = "jenkins-s3-upload-policy"
   user = "jenkins-deploy-user"
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Effect   = "Allow"
+        Effect   = "Allow",
         Action   = [
           "s3:PutObject",
           "s3:ListBucket",
           "s3:DeleteObject"
-        ]
+        ],
         Resource = [
           "${aws_s3_bucket.report_bucket.arn}",
           "${aws_s3_bucket.report_bucket.arn}/*"
@@ -114,5 +122,4 @@ resource "aws_iam_user_policy" "jenkins_policy" {
     ]
   })
 }
-
 

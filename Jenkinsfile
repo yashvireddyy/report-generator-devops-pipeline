@@ -3,9 +3,8 @@ pipeline {
 
     environment {
         AWS_CREDENTIALS = 'aws-credentials-s3'  // Jenkins AWS credentials ID
-        AWS_DEFAULT_REGION = 'ap-south-1'           // Change as needed
-        S3_BUCKET = 'my-devops-pipeline-bucket'           // Change as needed
-        CLOUDFRONT_ID = 'E1AW7KMP65SDP6'       // Change as needed
+        AWS_DEFAULT_REGION = 'ap-south-1'       // AWS region
+        S3_BUCKET = 'my-devops-pipeline-bucket' // Single static bucket
     }
 
     stages {
@@ -14,8 +13,8 @@ pipeline {
             steps {
                 echo "📥 Checking out source code..."
                 checkout([
-                    $class: 'GitSCM', 
-                    branches: [[name: '*/main']], 
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
                     userRemoteConfigs: [[url: 'https://github.com/yashvireddyy/report-generator-devops-pipeline.git']]
                 ])
             }
@@ -23,7 +22,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                echo "🛠 Building Docker image for report generator..."
+                echo "🛠 Building Docker image..."
                 bat 'docker build -t report-generator .'
             }
         }
@@ -36,20 +35,19 @@ pipeline {
                     -v "%CD%\\reports:/app/reports" ^
                     report-generator python report_generator.py
                 """
-                echo "✅ Reports generated in /reports folder."
+                echo "✅ Reports generated successfully."
             }
         }
 
         stage('Terraform Setup') {
             steps {
-                echo "🌐 Applying Terraform (S3 + CloudFront)..."
+                echo "🌍 Setting up infrastructure via Terraform..."
                 withAWS(credentials: "${AWS_CREDENTIALS}", region: "${AWS_DEFAULT_REGION}") {
                     dir('terraform') {
                         bat 'terraform init -input=false'
                         bat """
                         terraform plan -out=tfplan ^
                             -var "bucket_name=${S3_BUCKET}" ^
-                            -var "build_number=${BUILD_NUMBER}" ^
                             -var "aws_region=${AWS_DEFAULT_REGION}"
                         """
                         bat 'terraform apply -auto-approve tfplan'
@@ -69,23 +67,25 @@ pipeline {
             }
         }
 
-        stage('Invalidate CloudFront Cache') {
+        stage('Fetch CloudFront ID & Invalidate Cache') {
             steps {
                 echo "🧹 Invalidating CloudFront cache..."
-                withAWS(credentials: "${AWS_CREDENTIALS}", region: "${AWS_DEFAULT_REGION}") {
-                    bat """
-                    aws cloudfront create-invalidation ^
-                        --distribution-id ${CLOUDFRONT_ID} ^
-                        --paths "/*"
-                    """
+                script {
+                    def cfDistId = powershell(
+                        script: "terraform -chdir=terraform output -raw cloudfront_url | ForEach-Object { ($_ -split '/')[2] }",
+                        returnStdout: true
+                    ).trim()
+                    bat "aws cloudfront create-invalidation --distribution-id ${cfDistId} --paths '/*'"
                 }
             }
         }
 
         stage('Verification / Output URLs') {
             steps {
-                echo "🔗 Reports uploaded to S3. Access them via:"
-                echo "https://${S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com/reports/"
+                echo "🔗 Reports uploaded successfully. Access them via:"
+                echo "S3: https://${S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com/reports/sales_report.html"
+                echo "Or view via CloudFront (faster): see terraform output below 👇"
+                bat 'terraform -chdir=terraform output'
             }
         }
     }
@@ -95,7 +95,7 @@ pipeline {
             echo "✅ Pipeline completed successfully!"
         }
         failure {
-            echo "❌ Pipeline failed. Check Jenkins logs for details."
+            echo "❌ Pipeline failed. Check logs for errors."
         }
     }
 }
