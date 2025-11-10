@@ -13,7 +13,13 @@ variable "aws_region" {
 variable "bucket_name" {
   description = "Unique name of the S3 bucket for report uploads"
   type        = string
-  default     = "my-devops-pipeline-bucket"   # ✅ use your actual bucket name
+  default     = "my-devops-pipeline-bucket"  # short prefix
+}
+
+variable "build_number" {
+  description = "Jenkins build number for unique bucket naming"
+  type        = string
+  default     = "1"  # optional default for local testing
 }
 
 # -------------------------------
@@ -31,10 +37,5 @@ variable "cloudfront_comment" {
 variable "jenkins_user_name" {
   description = "IAM username used by Jenkins to access S3 and CloudFront"
   type        = string
-  default     = "jenkins-deploy-user"   # ✅ replace with your actual IAM user name
-}
-
-variable "build_number" {
-  description = "Jenkins build number for unique bucket naming"
-  type        = string
+  default     = "jenkins-deploy-user"  # must match your IAM user
 }
