@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // Set your AWS credentials ID from Jenkins Credentials Manager
-        AWS_CREDENTIALS = 'aws-cred-id'
+        AWS_CREDENTIALS = 'aws-credentials-s3'
         AWS_DEFAULT_REGION = 'ap-south-1'
         S3_BUCKET = 'my-devops-bucket'
         DOCKER_IMAGE = 'report-generator'
