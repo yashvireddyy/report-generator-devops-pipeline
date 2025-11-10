@@ -3,10 +3,12 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'ap-south-1'
-        S3_BUCKET = 'report-bucket-yashvi-2025'
+        S3_BUCKET = 'my-devops-pipeline-bucket'
         REPORT_DIR = 'reports'
         GIT_REPO = 'https://github.com/yashvireddyy/report-generator-devops-pipeline.git'
         BRANCH = 'main'
+        AWS_ACCESS_KEY_ID      = credentials('aws-access-key-id')
+        AWS_SECRET_ACCESS_KEY  = credentials('aws-secret-access-key')
     }
 
     stages {
@@ -66,7 +68,7 @@ pipeline {
             steps {
                 echo '🔍 Verifying upload and displaying URLs...'
                 script {
-                    def cloudfront_url = bat(
+                    def cloudfront_url = powershell(
                         script: "terraform -chdir=terraform output -raw cloudfront_url",
                         returnStdout: true
                     ).trim()
