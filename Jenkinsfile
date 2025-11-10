@@ -7,8 +7,7 @@ pipeline {
         REPORT_DIR = 'reports'
         GIT_REPO = 'https://github.com/yashvireddyy/report-generator-devops-pipeline.git'
         BRANCH = 'main'
-        AWS_ACCESS_KEY_ID      = credentials('aws-access-key-id')
-        AWS_SECRET_ACCESS_KEY  = credentials('aws-secret-access-key')
+        
     }
 
     stages {
