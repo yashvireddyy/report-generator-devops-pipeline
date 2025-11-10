@@ -19,7 +19,7 @@ variable "bucket_name" {
 variable "build_number" {
   description = "Jenkins build number for unique bucket naming"
   type        = string
-  default     = "1"  # optional default for local testing
+  
 }
 
 # -------------------------------
