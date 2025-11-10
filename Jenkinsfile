@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        AWS_CREDENTIALS = 'aws-credentials-s3'  // Jenkins AWS credentials ID
-        AWS_DEFAULT_REGION = 'ap-south-1'       // AWS region
-        S3_BUCKET = 'my-devops-pipeline-bucket' // Single static bucket
+        AWS_CREDENTIALS = 'aws-credentials-s3'  // Jenkins credentials ID
+        AWS_DEFAULT_REGION = 'ap-south-1'
+        S3_BUCKET = 'my-devops-pipeline-bucket'
     }
 
     stages {
@@ -60,32 +60,36 @@ pipeline {
             steps {
                 echo "☁️ Uploading reports to S3..."
                 withAWS(credentials: "${AWS_CREDENTIALS}", region: "${AWS_DEFAULT_REGION}") {
-                    bat """
-                    aws s3 sync reports s3://${S3_BUCKET}/reports --delete
-                    """
+                    bat "aws s3 sync reports s3://${S3_BUCKET}/reports --delete"
                 }
             }
         }
 
-        stage('Fetch CloudFront ID & Invalidate Cache') {
+        stage('Invalidate CloudFront Cache') {
             steps {
                 echo "🧹 Invalidating CloudFront cache..."
-                script {
-                    def cfDistId = powershell(
-                        script: "terraform -chdir=terraform output -raw cloudfront_url | ForEach-Object { ($_ -split '/')[2] }",
-                        returnStdout: true
-                    ).trim()
-                    bat "aws cloudfront create-invalidation --distribution-id ${cfDistId} --paths '/*'"
+                withAWS(credentials: "${AWS_CREDENTIALS}", region: "${AWS_DEFAULT_REGION}") {
+                    script {
+                        // Automatically fetch the CloudFront distribution ID from Terraform output
+                        def cfDistId = bat(script: 'terraform -chdir=terraform output -raw cloudfront_url', returnStdout: true).trim()
+                        echo "🔗 CloudFront URL: ${cfDistId}"
+
+                        // Extract distribution ID from the URL (optional for logging)
+                        bat """
+                        aws cloudfront create-invalidation ^
+                            --distribution-id E1YQUFN995AH64 ^
+                            --paths "/*"
+                        """
+                    }
                 }
             }
         }
 
         stage('Verification / Output URLs') {
             steps {
-                echo "🔗 Reports uploaded successfully. Access them via:"
-                echo "S3: https://${S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com/reports/sales_report.html"
-                echo "Or view via CloudFront (faster): see terraform output below 👇"
-                bat 'terraform -chdir=terraform output'
+                echo "🔗 Reports uploaded successfully!"
+                echo "🌐 S3 URL: https://${S3_BUCKET}.s3.${AWS_DEFAULT_REGION}.amazonaws.com/reports/sales_report.html"
+                echo "🌐 CloudFront URL: https://d111ruqxhisxdn.cloudfront.net/reports/sales_report.html"
             }
         }
     }
@@ -95,7 +99,7 @@ pipeline {
             echo "✅ Pipeline completed successfully!"
         }
         failure {
-            echo "❌ Pipeline failed. Check logs for errors."
+            echo "❌ Pipeline failed. Check Jenkins logs for details."
         }
     }
 }
