@@ -2,39 +2,27 @@ provider "aws" {
   region = var.aws_region
 }
 
-# -------------------------------
-# Single S3 Bucket (Static)
-# -------------------------------
-resource "aws_s3_bucket" "report_bucket" {
-  bucket = var.bucket_name  # ✅ Use a fixed bucket name (not dynamic)
-  tags = {
-    Name        = "report-generator-bucket"
-    Environment = "Dev"
-  }
+# ---------------------------------------------------------
+# Use an existing S3 bucket instead of creating a new one
+# ---------------------------------------------------------
+data "aws_s3_bucket" "existing_bucket" {
+  bucket = var.bucket_name
 }
 
-resource "aws_s3_bucket_public_access_block" "public_access" {
-  bucket                  = aws_s3_bucket.report_bucket.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-# -------------------------------
-# CloudFront Origin Access Identity
-# -------------------------------
+# ---------------------------------------------------------
+# CloudFront OAI (still managed by Terraform)
+# ---------------------------------------------------------
 resource "aws_cloudfront_origin_access_identity" "oai" {
-  comment = "OAI for report-generator-bucket"
+  comment = "OAI for existing report-generator-bucket"
 }
 
-# -------------------------------
-# CloudFront Distribution
-# -------------------------------
+# ---------------------------------------------------------
+# CloudFront Distribution (uses existing S3 bucket)
+# ---------------------------------------------------------
 resource "aws_cloudfront_distribution" "report_distribution" {
   origin {
-    domain_name = aws_s3_bucket.report_bucket.bucket_regional_domain_name
-    origin_id   = "S3-${aws_s3_bucket.report_bucket.id}"
+    domain_name = data.aws_s3_bucket.existing_bucket.bucket_regional_domain_name
+    origin_id   = "S3-${data.aws_s3_bucket.existing_bucket.id}"
 
     s3_origin_config {
       origin_access_identity = aws_cloudfront_origin_access_identity.oai.cloudfront_access_identity_path
@@ -47,7 +35,7 @@ resource "aws_cloudfront_distribution" "report_distribution" {
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-${aws_s3_bucket.report_bucket.id}"
+    target_origin_id = "S3-${data.aws_s3_bucket.existing_bucket.id}"
     viewer_protocol_policy = "redirect-to-https"
 
     forwarded_values {
@@ -75,11 +63,11 @@ resource "aws_cloudfront_distribution" "report_distribution" {
   }
 }
 
-# -------------------------------
+# ---------------------------------------------------------
 # S3 Bucket Policy for CloudFront Access
-# -------------------------------
+# ---------------------------------------------------------
 resource "aws_s3_bucket_policy" "private_policy" {
-  bucket = aws_s3_bucket.report_bucket.id
+  bucket = data.aws_s3_bucket.existing_bucket.id
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -91,18 +79,18 @@ resource "aws_s3_bucket_policy" "private_policy" {
           AWS = aws_cloudfront_origin_access_identity.oai.iam_arn
         },
         Action   = ["s3:GetObject"],
-        Resource = "${aws_s3_bucket.report_bucket.arn}/*"
+        Resource = "${data.aws_s3_bucket.existing_bucket.arn}/*"
       }
     ]
   })
 }
 
-# -------------------------------
-# IAM Policy for Jenkins (upload reports)
-# -------------------------------
+# ---------------------------------------------------------
+# IAM Policy for Jenkins uploads
+# ---------------------------------------------------------
 resource "aws_iam_user_policy" "jenkins_policy" {
   name = "jenkins-s3-upload-policy"
-  user = "jenkins-deploy-user"
+  user = var.jenkins_user_name
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -115,11 +103,25 @@ resource "aws_iam_user_policy" "jenkins_policy" {
           "s3:DeleteObject"
         ],
         Resource = [
-          "${aws_s3_bucket.report_bucket.arn}",
-          "${aws_s3_bucket.report_bucket.arn}/*"
+          "${data.aws_s3_bucket.existing_bucket.arn}",
+          "${data.aws_s3_bucket.existing_bucket.arn}/*"
         ]
       }
     ]
   })
 }
 
+# ---------------------------------------------------------
+# Outputs
+# ---------------------------------------------------------
+output "s3_bucket_name" {
+  value = data.aws_s3_bucket.existing_bucket.bucket
+}
+
+output "s3_url" {
+  value = "https://${data.aws_s3_bucket.existing_bucket.bucket}.s3.${var.aws_region}.amazonaws.com/reports/sales_report.html"
+}
+
+output "cloudfront_url" {
+  value = "https://${aws_cloudfront_distribution.report_distribution.domain_name}/reports/sales_report.html"
+}
