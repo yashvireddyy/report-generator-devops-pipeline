@@ -2,9 +2,7 @@ provider "aws" {
   region = var.aws_region
 }
 
-variable "bucket_name" {}
-variable "build_number" {}
-variable "aws_region" {}
+
 
 # S3 Bucket (Private)
 resource "aws_s3_bucket" "report_bucket" {
@@ -117,15 +115,4 @@ resource "aws_iam_user_policy" "jenkins_policy" {
   })
 }
 
-# Outputs
-output "cloudfront_url" {
-  value = "https://${aws_cloudfront_distribution.report_distribution.domain_name}"
-}
 
-output "s3_bucket_name" {
-  value = aws_s3_bucket.report_bucket.id
-}
-
-output "s3_url" {
-  value = "https://${aws_s3_bucket.report_bucket.bucket_regional_domain_name}/sales_report.html"
-}
