@@ -87,11 +87,9 @@ resource "aws_cloudfront_distribution" "report_distribution" {
 # -------------------------------
 # IAM Policy for Jenkins User
 # -------------------------------
-# Replace the username below with your actual IAM username created for Jenkins
-# Example: "jenkins-deploy-user" or "report-generator-user"
 resource "aws_iam_user_policy" "jenkins_policy" {
   name = "jenkins-s3-upload-policy"
-  user = "jenkins-deploy-user"   # <-- put your IAM username here in quotes!
+  user = var.jenkins_user_name   # ✅ uses variable instead of hardcoding
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -113,5 +111,3 @@ resource "aws_iam_user_policy" "jenkins_policy" {
     ]
   })
 }
-
-
