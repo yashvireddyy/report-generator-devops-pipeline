@@ -111,17 +111,3 @@ resource "aws_iam_user_policy" "jenkins_policy" {
   })
 }
 
-# ---------------------------------------------------------
-# Outputs
-# ---------------------------------------------------------
-output "s3_bucket_name" {
-  value = data.aws_s3_bucket.existing_bucket.bucket
-}
-
-output "s3_url" {
-  value = "https://${data.aws_s3_bucket.existing_bucket.bucket}.s3.${var.aws_region}.amazonaws.com/reports/sales_report.html"
-}
-
-output "cloudfront_url" {
-  value = "https://${aws_cloudfront_distribution.report_distribution.domain_name}/reports/sales_report.html"
-}
