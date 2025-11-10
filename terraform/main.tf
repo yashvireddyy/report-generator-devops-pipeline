@@ -5,8 +5,9 @@ provider "aws" {
 # -------------------------------
 # S3 Bucket for Reports
 # -------------------------------
+# Append Jenkins build number to make bucket name unique
 resource "aws_s3_bucket" "report_bucket" {
-  bucket = var.bucket_name
+  bucket = "${var.bucket_name}-${var.build_number}"
 
   tags = {
     Name        = "report-generator-bucket"
@@ -89,7 +90,7 @@ resource "aws_cloudfront_distribution" "report_distribution" {
 # -------------------------------
 resource "aws_iam_user_policy" "jenkins_policy" {
   name = "jenkins-s3-upload-policy"
-  user = var.jenkins_user_name   # ✅ uses variable instead of hardcoding
+  user = var.jenkins_user_name
 
   policy = jsonencode({
     Version = "2012-10-17",

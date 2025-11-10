@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         AWS_DEFAULT_REGION = 'ap-south-1'
-        S3_BUCKET = 'my-devops-pipeline-bucket'
+        S3_BUCKET_BASE = 'my-devops-pipeline-bucket' // base name
         REPORT_DIR = 'reports'
         GIT_REPO = 'https://github.com/yashvireddyy/report-generator-devops-pipeline.git'
         BRANCH = 'main'
@@ -41,14 +41,18 @@ pipeline {
 
         stage('Terraform Infrastructure Setup') {
             steps {
-                echo '🌍 Setting up AWS infrastructure using Terraform (S3 + CloudFront)...'
+                script {
+                    // Append Jenkins build number to make bucket unique
+                    env.S3_BUCKET = "${S3_BUCKET_BASE}-${env.BUILD_NUMBER}"
+                }
+                echo "🌍 Setting up AWS infrastructure using Terraform (S3 + CloudFront)..."
                 withAWS(region: "${AWS_DEFAULT_REGION}", credentials: "${AWS_CREDENTIALS}") {
                     dir('terraform') {
-                        bat '''
+                        bat """
                             terraform init -input=false
-                            terraform plan -out=tfplan
+                            terraform plan -out=tfplan -var "bucket_name=${S3_BUCKET}" -var "build_number=${BUILD_NUMBER}"
                             terraform apply -auto-approve tfplan
-                        '''
+                        """
                     }
                 }
             }
@@ -58,14 +62,25 @@ pipeline {
             steps {
                 echo '☁️ Uploading generated reports to AWS S3 bucket...'
                 withAWS(region: "${AWS_DEFAULT_REGION}", credentials: "${AWS_CREDENTIALS}") {
-                    // Wait briefly to ensure AWS CLI readiness
-                    bat '''
-                        timeout 5
-                        aws s3 sync %REPORT_DIR% s3://%S3_BUCKET% --delete
-                    '''
+                    script {
+                        // Get dynamically created bucket name from Terraform
+                        def s3_bucket = powershell(
+                            script: "terraform -chdir=terraform output -raw s3_bucket_name",
+                            returnStdout: true
+                        ).trim()
+
+                        echo "📦 Using S3 Bucket: ${s3_bucket}"
+
+                        // Sync local reports to the dynamically generated bucket
+                        bat """
+                            timeout 5
+                            aws s3 sync %REPORT_DIR% s3://${s3_bucket} --delete
+                        """
+                    }
                 }
             }
         }
+
 
         stage('Verification / Output URLs') {
             steps {

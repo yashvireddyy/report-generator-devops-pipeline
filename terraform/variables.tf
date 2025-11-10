@@ -33,3 +33,8 @@ variable "jenkins_user_name" {
   type        = string
   default     = "jenkins-deploy-user"   # ✅ replace with your actual IAM user name
 }
+
+variable "build_number" {
+  description = "Jenkins build number for unique bucket naming"
+  type        = string
+}
